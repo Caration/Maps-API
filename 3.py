@@ -67,21 +67,30 @@ while running:
                 dol = float(pos1[0])
                 shr = float(pos1[1])
                 shr += ((0.05 * float(delta)) + 0.001)
+                if shr >= 80:
+                    shr = 79.99
                 pos = f'{dol} {shr}'
             if event.key == pygame.K_DOWN:
                 dol = float(pos1[0])
                 shr = float(pos1[1])
                 shr -= ((0.05 * float(delta)) + 0.001)
+                if shr <= -70:
+                    shr = -69.99
                 pos = f'{dol} {shr}'
             if event.key == pygame.K_LEFT:
                 dol = float(pos1[0])
                 shr = float(pos1[1])
                 dol -= ((0.05 * float(delta)) + 0.001)
+                if dol <= -179.99:
+                    dol = 179.99
+                print(dol)
                 pos = f'{dol} {shr}'
             if event.key == pygame.K_RIGHT:
                 dol = float(pos1[0])
                 shr = float(pos1[1])
                 dol += ((0.05 * float(delta)) + 0.001)
+                if dol >= 179.99:
+                    dol = -179.99
                 pos = f'{dol} {shr}'
 
 pygame.quit()
