@@ -88,7 +88,7 @@ while running:
             if event.key == pygame.K_RIGHT:
                 dol = float(pos1[0])
                 shr = float(pos1[1])
-                dol += ((0.05 * float(delta)) + 0.001)
+                dol = dol + ((0.05 * float(delta)) + 0.001)
                 if dol >= 179.99:
                     dol = -179.99
                 pos = f'{dol} {shr}'
