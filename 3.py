@@ -2,6 +2,9 @@ import os
 import sys
 import pygame
 import requests
+import sys
+from form import Ui_MainWindow
+from PyQt5.QtWidgets import QApplication, QMainWindow
 
 
 API_KEY = '40d1649f-0493-4b70-98ba-98533de7710b'
@@ -13,39 +16,74 @@ json_response = response.json()
 toponym = json_response['response']['GeoObjectCollection']['featureMember'][0]['GeoObject']
 
 
-
 pos = toponym['Point']['pos']
 delta = '0.01'
 map_file = "map.png"
 
 
+class Maps:
+    def __init__(self):
+        self.map_file = map_file
+        self.map_params = {
+            "ll": ",".join(pos.split()),
+            "spn": ",".join([delta, delta]),
+            "l": "map"  # map sat skl
+        }
 
-def mapp(pos, delta):
-    global map_file
-    map_params = {
-        "ll": ",".join(pos.split()),
-        "spn": ",".join([delta, delta]),
-        "l": "map"
-    }
-    map_api_server = "http://static-maps.yandex.ru/1.x/"
-    response = requests.get(map_api_server, params=map_params)
+    def get_map(self):
+        map_api_server = "http://static-maps.yandex.ru/1.x/"
+        response = requests.get(map_api_server, params=self.map_params)
 
+        if not response:
+            print("Ошибка выполнения запроса:")
+            print("Http статус:", response.status_code,
+                  "(", response.reason, ")")
+            sys.exit(1)
 
-    if not response:
-        print("Ошибка выполнения запроса:")
-        print("Http статус:", response.status_code, "(", response.reason, ")")
-        sys.exit(1)
+        with open(self.map_file, "wb") as file:
+            file.write(response.content)
+
+    def set_type(self, type):
+        self.map_params['l'] = type
     
-    with open(map_file, "wb") as file:
-        file.write(response.content)
+    def set_pos(self, pos):
+        self.map_params['ll'] = ",".join(pos.split())
+
+    def set_delta(self, delta):
+        self.map_params['spn'] = ",".join([delta, delta])
 
 
+mapp = Maps()
+
+
+class MyWidget(QMainWindow, Ui_MainWindow):
+    def __init__(self):
+        super().__init__()
+        self.setupUi(self)
+        self.sp = [None, None, None]
+
+        self.radioButton.clicked.connect(self.run2)
+        self.radioButton.setChecked(True)
+        self.radioButton_2.clicked.connect(self.run2)
+        self.radioButton_3.clicked.connect(self.run2)
+        self.sl = {self.radioButton: 'map',
+                   self.radioButton_2: 'sat', self.radioButton_3: 'skl'}
+
+    def run2(self, button):
+        a = self.sl[self.sender()]
+        mapp.set_type(a)
+
+
+app = QApplication(sys.argv)
+ex = MyWidget()
+ex.show()
 pygame.init()
 running = True
 clock = pygame.time.Clock()
 fps = 60
 while running:
-    mapp(pos, delta)
+    mapp.set_pos(pos)
+    mapp.get_map()
     pos1 = list(map(float, pos.split()))
     screen = pygame.display.set_mode((600, 450))
     screen.blit(pygame.image.load(map_file), (0, 0))
@@ -83,7 +121,6 @@ while running:
                 dol -= ((0.05 * float(delta)) + 0.001)
                 if dol <= -179.99:
                     dol = 179.99
-                print(dol)
                 pos = f'{dol} {shr}'
             if event.key == pygame.K_RIGHT:
                 dol = float(pos1[0])
@@ -92,6 +129,7 @@ while running:
                 if dol >= 179.99:
                     dol = -179.99
                 pos = f'{dol} {shr}'
+        mapp.set_delta(delta)
 
 pygame.quit()
 os.remove(map_file)
