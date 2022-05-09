@@ -3,7 +3,8 @@ import sys
 import pygame
 import requests
 import sys
-from form import Ui_MainWindow
+from random import randint
+from form import Ui_Menu
 from PyQt5.QtWidgets import QApplication, QMainWindow
 
 
@@ -27,7 +28,8 @@ class Maps:
         self.map_params = {
             "ll": ",".join(pos.split()),
             "spn": ",".join([delta, delta]),
-            "l": "map"  # map sat skl
+            "l": "map",
+            'pt': ""
         }
 
     def get_map(self):
@@ -51,17 +53,33 @@ class Maps:
 
     def set_delta(self, delta):
         self.map_params['spn'] = ",".join([delta, delta])
+    
+    def get_pos(self, geocode):
+        decoder_request = f'http://geocode-maps.yandex.ru/1.x/?apikey={API_KEY}&geocode={",".join(geocode)}&format=json'
+        response = requests.get(decoder_request)
+        json_response = response.json()
+        toponym = json_response['response']['GeoObjectCollection']['featureMember'][0]['GeoObject']
+        pos = toponym['Point']['pos']
+        return pos
+
+    def pos_now(self):
+        return self.map_params['ll'].replace(',', ' ')
+    
+    def set_marker(self):
+        #37.617698,55.755864,pmwtm1
+        self.map_params['pt'] = f'{self.map_params["ll"]},pmwtm1'
 
 
 mapp = Maps()
 
 
-class MyWidget(QMainWindow, Ui_MainWindow):
+class MyWidget(QMainWindow, Ui_Menu):
     def __init__(self):
         super().__init__()
         self.setupUi(self)
         self.sp = [None, None, None]
 
+        self.pushButton.clicked.connect(self.run)
         self.radioButton.clicked.connect(self.run2)
         self.radioButton.setChecked(True)
         self.radioButton_2.clicked.connect(self.run2)
@@ -72,6 +90,13 @@ class MyWidget(QMainWindow, Ui_MainWindow):
     def run2(self, button):
         a = self.sl[self.sender()]
         mapp.set_type(a)
+    
+    def run(self):
+        text = self.lineEdit.text().replace(',', '')
+        geocode = text.split()
+        pos = mapp.get_pos(geocode)
+        mapp.set_pos(pos)
+        mapp.set_marker()
 
 
 app = QApplication(sys.argv)
@@ -81,10 +106,10 @@ pygame.init()
 running = True
 clock = pygame.time.Clock()
 fps = 60
+pos = f'{randint(20, 80)} {randint(20, 80)}'
 while running:
-    mapp.set_pos(pos)
     mapp.get_map()
-    pos1 = list(map(float, pos.split()))
+    pos1 = list(map(float, mapp.pos_now().split()))
     screen = pygame.display.set_mode((600, 450))
     screen.blit(pygame.image.load(map_file), (0, 0))
     clock.tick(fps)
@@ -108,6 +133,7 @@ while running:
                 if shr >= 80:
                     shr = 79.99
                 pos = f'{dol} {shr}'
+                mapp.set_pos(pos)
             if event.key == pygame.K_DOWN:
                 dol = float(pos1[0])
                 shr = float(pos1[1])
@@ -115,6 +141,7 @@ while running:
                 if shr <= -70:
                     shr = -69.99
                 pos = f'{dol} {shr}'
+                mapp.set_pos(pos)
             if event.key == pygame.K_LEFT:
                 dol = float(pos1[0])
                 shr = float(pos1[1])
@@ -122,6 +149,7 @@ while running:
                 if dol <= -179.99:
                     dol = 179.99
                 pos = f'{dol} {shr}'
+                mapp.set_pos(pos)
             if event.key == pygame.K_RIGHT:
                 dol = float(pos1[0])
                 shr = float(pos1[1])
@@ -129,7 +157,9 @@ while running:
                 if dol >= 179.99:
                     dol = -179.99
                 pos = f'{dol} {shr}'
+                mapp.set_pos(pos)
         mapp.set_delta(delta)
+
 
 pygame.quit()
 os.remove(map_file)
