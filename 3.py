@@ -68,7 +68,22 @@ class Maps:
     def set_marker(self):
         #37.617698,55.755864,pmwtm1
         self.map_params['pt'] = f'{self.map_params["ll"]},pmwtm1'
-
+    
+    def delete_marker(self):
+        self.map_params['pt'] = ''
+    
+    def get_place(self, geocode):
+        #geocode = self.map_params['ll'].split(',')
+        decoder_request = f'http://geocode-maps.yandex.ru/1.x/?apikey={API_KEY}&geocode={",".join(geocode)}&format=json'
+        response = requests.get(decoder_request)
+        json_response = response.json()
+        toponym = json_response['response']['GeoObjectCollection']['featureMember'][0]['GeoObject']
+        addres = toponym['metaDataProperty']['GeocoderMetaData']['AddressDetails']['Country']['AddressLine']
+        try:
+            p_index = toponym['metaDataProperty']['GeocoderMetaData']['Address']['postal_code']
+        except KeyError:
+            p_index = ''
+        return (addres, p_index)
 
 mapp = Maps()
 
@@ -77,8 +92,10 @@ class MyWidget(QMainWindow, Ui_Menu):
     def __init__(self):
         super().__init__()
         self.setupUi(self)
-        self.sp = [None, None, None]
+        self.last_addres = ''
 
+        self.pushButton_2.clicked.connect(self.run3)
+        self.checkBox.toggled.connect(self.run4)
         self.pushButton.clicked.connect(self.run)
         self.radioButton.clicked.connect(self.run2)
         self.radioButton.setChecked(True)
@@ -97,6 +114,23 @@ class MyWidget(QMainWindow, Ui_Menu):
         pos = mapp.get_pos(geocode)
         mapp.set_pos(pos)
         mapp.set_marker()
+        self.last_addres = pos.split()
+        addres, p_index = map(str, mapp.get_place(self.last_addres))
+        if self.checkBox.isChecked():
+            self.label.setText(f'{addres}, {p_index}')
+        else:
+            self.label.setText(addres)
+    
+    def run3(self):
+        mapp.delete_marker()
+        self.label.setText('')
+    
+    def run4(self):
+        addres, p_index = map(str, mapp.get_place(self.last_addres))
+        if self.checkBox.isChecked():
+            self.label.setText(f'{addres}, {p_index}')
+        else:
+            self.label.setText(addres)
 
 
 app = QApplication(sys.argv)
